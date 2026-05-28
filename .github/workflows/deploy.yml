@@ -12,16 +12,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: /opt/xprnt/nova-local
-          clean: false
 
-      - name: Install dependencies
+      - name: Deploy
         run: |
-          cd /opt/xprnt/nova-local
-          source venv/bin/activate
-          pip install -r requirements.txt
-
-      - name: Restart service
-        run: |
-          sudo systemctl restart nova-local
+          cd $GITHUB_WORKSPACE
+          docker compose down
+          docker compose up -d --build

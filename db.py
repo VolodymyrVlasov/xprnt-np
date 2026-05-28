@@ -2,10 +2,11 @@
 Модуль роботи з базою даних SQLite.
 Зберігає налаштування (key-value) та список створених ТТН.
 """
+import os
 import sqlite3
 from datetime import datetime
 
-DB_PATH = "nova_ttn.db"
+DB_PATH = os.environ.get("DB_PATH", "nova_ttn.db")
 
 
 def get_connection():

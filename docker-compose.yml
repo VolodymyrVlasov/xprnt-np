@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  nova-ttn:
+    build: .
+    container_name: nova-ttn
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5001:5001"
+    volumes:
+      - nova-ttn-db:/app/data
+    env_file:
+      - .env
+
+volumes:
+  nova-ttn-db:
