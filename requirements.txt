@@ -1,0 +1,5 @@
+flask
+anthropic
+requests
+flask-dance
+python-dotenv

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XPRNT · Доступ заборонено</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center font-sans">
+
+  <div class="w-full max-w-sm mx-4">
+    <div class="bg-gray-800 rounded-2xl border border-gray-700 p-10
+                flex flex-col items-center gap-6 shadow-2xl text-center">
+
+      <div class="w-14 h-14 rounded-2xl bg-red-900/40 border border-red-700/40
+                  flex items-center justify-center text-3xl">
+        ⛔
+      </div>
+
+      <div class="space-y-2">
+        <h1 class="text-lg font-semibold text-white">Доступ заборонено</h1>
+        <p class="text-sm text-gray-400">
+          Акаунт <span class="text-red-400 font-mono">{{ email }}</span>
+          не має доступу до цього застосунку.
+        </p>
+        <p class="text-xs text-gray-600">
+          Зверніться до адміністратора або спробуйте інший акаунт.
+        </p>
+      </div>
+
+      <a href="/logout"
+         class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600
+                text-gray-200 px-5 py-2.5 rounded-xl text-sm font-medium
+                transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6
+                   a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Спробувати інший акаунт
+      </a>
+
+    </div>
+  </div>
+
+</body>
+</html>

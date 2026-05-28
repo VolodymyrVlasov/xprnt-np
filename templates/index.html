@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XPRNT · Накладні</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 0.8s linear infinite; }
+
+    @keyframes slideIn {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(110%); opacity: 0; }
+    }
+    .toast-in  { animation: slideIn 0.35s ease forwards; }
+    .toast-out { animation: slideOut 0.35s ease forwards; }
+
+    .field-error { border-color: #ef4444 !important; }
+    .field-ok    { border-color: #22c55e !important; }
+  </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden font-sans">
+
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-80"></div>
+
+  <!-- ── Header ── -->
+  <header class="h-11 flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 flex items-center gap-2">
+    <span class="font-bold text-white tracking-wide">XPRNT</span>
+    <span class="text-gray-500 text-sm">· Накладні</span>
+    <div class="ml-auto flex items-center gap-3">
+      <button onclick="openSettings()" title="Налаштування"
+              class="w-8 h-8 flex items-center justify-center rounded-lg
+                     bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+             viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0
+                   002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0
+                   001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0
+                   00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0
+                   00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0
+                   00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0
+                   00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0
+                   001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608
+                   2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </button>
+      <span class="text-xs text-gray-400 hidden sm:inline select-all">{{ user_email }}</span>
+      <a href="/logout" class="text-xs text-gray-500 hover:text-red-400 transition-colors">
+        Вийти
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Main content ── -->
+  <div class="flex-1 flex flex-col overflow-hidden p-4 gap-3 min-h-0">
+
+    <!-- ══ Upper zone: 35vh ══ -->
+    <div class="flex-shrink-0 flex flex-col min-h-0" style="height: 35vh">
+
+      <!-- Sub-tabs nav -->
+      <div class="flex flex-shrink-0 border-b border-gray-700 -mb-px">
+        <button id="subtab-btn-create" onclick="switchSubTab('create')"
+                class="subtab-btn px-4 py-2 text-sm font-medium border-b-2
+                       border-red-400 text-white transition-colors">
+          Створити ТТН
+        </button>
+        <button id="subtab-btn-repeat" onclick="switchSubTab('repeat')"
+                class="subtab-btn px-4 py-2 text-sm font-medium border-b-2
+                       border-transparent text-gray-400 hover:text-gray-200 transition-colors">
+          Повторити ТТН
+        </button>
+      </div>
+
+      <!-- Sub-tab content, scrollable -->
+      <div class="flex-1 overflow-y-auto min-h-0 pt-3">
+
+        <!-- ── Sub-tab: Створити ТТН ── -->
+        <div id="subtab-create" class="subtab-content space-y-3">
+
+          <div id="create-error"
+               class="hidden bg-red-900/40 border border-red-500 rounded-lg
+                      px-4 py-3 text-red-300 text-sm"></div>
+
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-4 space-y-3">
+
+            <!-- Delivery type switcher -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Тип доставки
+              </label>
+              <div class="flex gap-1 bg-gray-900 rounded-lg p-1">
+                <label class="delivery-type-label flex-1 cursor-pointer text-center
+                              py-1.5 px-2 rounded-md text-sm transition-colors select-none
+                              bg-gray-700 text-white font-medium">
+                  <input type="radio" name="delivery_type" value="warehouse" checked
+                         class="sr-only" onchange="onDeliveryTypeChange(true)">
+                  Відділення
+                </label>
+                <label class="delivery-type-label flex-1 cursor-pointer text-center
+                              py-1.5 px-2 rounded-md text-sm transition-colors select-none
+                              text-gray-400 hover:text-gray-200">
+                  <input type="radio" name="delivery_type" value="parcel_locker"
+                         class="sr-only" onchange="onDeliveryTypeChange(true)">
+                  Поштомат
+                </label>
+                <label class="delivery-type-label flex-1 cursor-pointer text-center
+                              py-1.5 px-2 rounded-md text-sm transition-colors select-none
+                              text-gray-400 hover:text-gray-200">
+                  <input type="radio" name="delivery_type" value="address"
+                         class="sr-only" onchange="onDeliveryTypeChange(true)">
+                  Адресна
+                </label>
+              </div>
+              <div id="hint-warehouse" class="text-xs text-gray-600">
+                AI витягне: ПІБ, телефон, місто, номер відділення
+              </div>
+              <div id="hint-parcel_locker" class="hidden text-xs text-gray-600">
+                AI витягне: ПІБ, телефон, місто, номер поштомату
+              </div>
+              <div id="hint-address" class="hidden text-xs text-gray-600">
+                AI витягне: ПІБ, телефон, місто, вулицю, будинок, квартиру
+              </div>
+            </div>
+
+            <!-- Text input -->
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium text-gray-300">
+                Текст з даними отримувача
+                <span class="text-gray-500 font-normal ml-1">— будь-який формат</span>
+              </label>
+              <textarea id="recipient-text" rows="3"
+                        placeholder="Наприклад: Анастасія Сергіївна 096 122-89-03 місто Київ 79 відділення"
+                        class="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2.5
+                               text-gray-100 placeholder-gray-600 resize-y
+                               focus:outline-none focus:border-blue-500 transition-colors
+                               text-sm leading-relaxed"></textarea>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-preview" onclick="previewRecipient()"
+                      class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600
+                             text-gray-200 px-4 py-2 rounded-lg text-sm font-medium
+                             transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                     viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+                           9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <span id="btn-preview-text">Розпізнати</span>
+                <svg id="spinner-preview" class="spinner w-4 h-4 hidden" fill="none"
+                     viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10"
+                          stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </button>
+
+              <button id="btn-fast" onclick="fastCreateTTN()"
+                      class="flex items-center gap-2 bg-amber-600 hover:bg-amber-500
+                             text-white px-4 py-2 rounded-lg text-sm font-medium
+                             transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                     viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <span id="btn-fast-text">Розпізнати і створити</span>
+                <svg id="spinner-fast" class="spinner w-4 h-4 hidden" fill="none"
+                     viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10"
+                          stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </button>
+
+              <button id="btn-create" onclick="createTTN()" disabled
+                      class="flex items-center gap-2 bg-red-600 hover:bg-red-500
+                             disabled:bg-gray-700 disabled:text-gray-500
+                             disabled:cursor-not-allowed text-white px-5 py-2
+                             rounded-lg text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                     viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 4v16m8-8H4"/>
+                </svg>
+                <span id="btn-create-text">Створити ТТН</span>
+                <svg id="spinner-create" class="spinner w-4 h-4 hidden" fill="none"
+                     viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10"
+                          stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </button>
+            </div>
+
+          </div><!-- /form card -->
+
+          <!-- Preview block -->
+          <div id="preview-block"
+               class="hidden bg-gray-800 rounded-xl border border-gray-700 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Розпізнані дані
+              </h2>
+              <span id="p-delivery-type-badge"
+                    class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-300"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Прізвище</label>
+                <div id="p-last-name"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Ім'я</label>
+                <div id="p-first-name"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">По-батькові</label>
+                <div id="p-middle-name"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700 text-gray-500 italic"></div>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Телефон</label>
+                <div id="p-phone"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+              <div class="space-y-1 col-span-2">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Місто</label>
+                <div id="p-city"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+            </div>
+            <div id="preview-warehouse-fields" class="grid grid-cols-2 gap-2">
+              <div class="space-y-1 col-span-2">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Відділення №</label>
+                <div id="p-warehouse"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+            </div>
+            <div id="preview-locker-fields" class="hidden grid grid-cols-2 gap-2">
+              <div class="space-y-1 col-span-2">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Поштомат №</label>
+                <div id="p-locker"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+            </div>
+            <div id="preview-address-fields" class="hidden grid grid-cols-2 gap-2">
+              <div class="space-y-1 col-span-2">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Вулиця</label>
+                <div id="p-street"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Будинок</label>
+                <div id="p-building"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700"></div>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500 uppercase tracking-wide">Кв./Офіс</label>
+                <div id="p-apartment"
+                     class="preview-field bg-gray-900 rounded-lg px-3 py-1.5 text-sm border border-gray-700 text-gray-500 italic"></div>
+              </div>
+            </div>
+            <p id="preview-hint" class="hidden mt-2 text-xs text-red-400">
+              ⚠ Підсвічені поля не вдалось розпізнати. Уточніть текст і спробуйте ще раз.
+            </p>
+          </div><!-- /preview-block -->
+
+        </div><!-- /subtab-create -->
+
+        <!-- ── Sub-tab: Повторити ТТН ── -->
+        <div id="subtab-repeat" class="subtab-content hidden">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-4 space-y-3">
+
+            <div id="repeat-error"
+                 class="hidden bg-red-900/40 border border-red-500 rounded-lg
+                        px-4 py-3 text-red-300 text-sm"></div>
+
+            <div class="flex gap-2 items-center">
+              <input id="repeat-ttn-input" type="text" inputmode="numeric"
+                     pattern="[0-9]*" maxlength="14"
+                     placeholder="Номер існуючої ТТН"
+                     oninput="onRepeatInputChange()"
+                     class="min-w-0 flex-1 bg-gray-900 border border-gray-600 rounded-lg
+                            px-4 py-2 text-gray-100 placeholder-gray-600 font-mono text-sm
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+              <button id="btn-repeat" onclick="repeatTTN()"
+                      class="flex-shrink-0 flex items-center gap-1.5 bg-indigo-600
+                             hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500
+                             disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg
+                             text-sm font-medium transition-colors whitespace-nowrap">
+                <span id="btn-repeat-text">Створити →</span>
+                <svg id="spinner-repeat" class="spinner w-4 h-4 hidden" fill="none"
+                     viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10"
+                          stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </button>
+            </div>
+
+            <p class="text-xs text-gray-600">
+              Підтягне дані отримувача зі старої ТТН і створить нову накладну
+            </p>
+
+            <div id="repeat-preview" class="hidden space-y-3 pt-3 border-t border-gray-700">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Дані отримувача
+                </span>
+                <span id="repeat-delivery-badge"
+                      class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-300"></span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-1">
+                  <div class="text-xs text-gray-500 uppercase tracking-wide">Отримувач</div>
+                  <div id="repeat-recipient-name"
+                       class="bg-gray-900 rounded px-2 py-1.5 text-sm text-gray-200 truncate"></div>
+                </div>
+                <div class="space-y-1">
+                  <div class="text-xs text-gray-500 uppercase tracking-wide">Телефон</div>
+                  <div id="repeat-phone"
+                       class="bg-gray-900 rounded px-2 py-1.5 text-sm text-gray-200 font-mono"></div>
+                </div>
+                <div class="space-y-1 col-span-2">
+                  <div class="text-xs text-gray-500 uppercase tracking-wide">Місто / Адреса</div>
+                  <div id="repeat-address"
+                       class="bg-gray-900 rounded px-2 py-1.5 text-sm text-gray-300 truncate"></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /subtab-repeat -->
+
+      </div><!-- /scroll area -->
+    </div><!-- /upper zone -->
+
+    <!-- ══ Lower zone: TTN table ══ -->
+    <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div class="flex items-center justify-between mb-2 flex-shrink-0">
+        <h2 class="text-sm font-semibold text-gray-300">Створені накладні</h2>
+        <button onclick="loadTTNs()"
+                class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+          Оновити
+        </button>
+      </div>
+      <div class="flex-1 min-h-0 bg-gray-800 rounded-xl border border-gray-700 overflow-auto">
+        <table class="w-full text-sm table-fixed">
+          <thead class="bg-gray-700/60 sticky top-0 z-10">
+            <tr>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[7%]">Дата</th>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[14%]">ТТН</th>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[17%]">Отримувач</th>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[13%]">Місто</th>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[12%]">Телефон</th>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[5%]">Вага</th>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[9%]">Габарити</th>
+              <th class="text-left px-2 py-2 text-gray-400 font-medium text-xs w-[8%]">Тип</th>
+              <th class="text-center px-2 py-2 text-gray-400 font-medium text-xs w-[15%]">Дії</th>
+            </tr>
+          </thead>
+          <tbody id="ttns-tbody">
+            <tr>
+              <td colspan="9" class="text-center py-12 text-gray-600 text-sm">
+                Завантаження...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /lower zone -->
+
+  </div><!-- /main content -->
+
+  <!-- ════════════════════ Settings Modal ════════════════════ -->
+  <div id="settingsModal"
+       class="hidden fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4"
+       onclick="onModalBackdropClick(event)">
+    <div class="bg-gray-800 rounded-2xl border border-gray-700 flex flex-col shadow-2xl"
+         style="width: 90vw; max-width: 1200px; height: 85vh;"
+         onclick="event.stopPropagation()">
+
+      <!-- Modal header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
+        <h2 class="text-base font-semibold">Налаштування</h2>
+        <button onclick="closeSettings()"
+                class="w-8 h-8 flex items-center justify-center rounded-lg
+                       bg-gray-700 hover:bg-gray-600 text-gray-300 text-xl leading-none
+                       transition-colors">
+          &times;
+        </button>
+      </div>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-4">
+
+        <!-- 3-column grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          <!-- ── Card 1: ВІДПРАВНИК ── -->
+          <div class="bg-gray-900 rounded-xl border border-gray-700 p-5 space-y-4">
+            <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+              <span>📦</span> Відправник
+            </h3>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">ПІБ</label>
+              <input id="sender_name" type="text" placeholder="Іваненко Іван Іванович"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">Телефон</label>
+              <input id="sender_phone" type="text" placeholder="380671234567"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">Місто</label>
+              <input id="sender_city" type="text" placeholder="Київ"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">Відділення НП</label>
+              <input id="sender_warehouse" type="text" placeholder="1"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">
+                Ref відправника в НП
+                <span class="text-gray-600 ml-1">— з кабінету НП</span>
+              </label>
+              <div class="flex gap-2">
+                <input id="sender_np_ref" type="text"
+                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                       class="flex-1 min-w-0 bg-gray-800 border border-gray-600 rounded-lg
+                              px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                              focus:outline-none focus:border-blue-500 transition-colors font-mono" />
+                <button type="button" title="Оновити (не реалізовано)"
+                        class="flex-shrink-0 w-9 h-9 flex items-center justify-center
+                               bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-400
+                               transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                       viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582
+                             9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0
+                             01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="border-t border-gray-700 pt-4 space-y-3">
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500">API ключ Нової Пошти</label>
+                <div class="relative">
+                  <input id="np_api_key" type="password"
+                         placeholder="Ваш ключ з кабінету НП"
+                         class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                                px-3 py-2 pr-9 text-sm text-gray-100 placeholder-gray-600
+                                focus:outline-none focus:border-blue-500 transition-colors" />
+                  <button type="button" onclick="togglePassword('np_api_key')"
+                          class="absolute right-2 top-1/2 -translate-y-1/2
+                                 text-gray-500 hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                         viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+                               9.542 7-1.274 4.057-5.064 7-9.542 7-4.477
+                               0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs text-gray-500">API ключ Anthropic (Claude)</label>
+                <div class="relative">
+                  <input id="claude_api_key" type="password"
+                         placeholder="sk-ant-..."
+                         class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                                px-3 py-2 pr-9 text-sm text-gray-100 placeholder-gray-600
+                                focus:outline-none focus:border-blue-500 transition-colors" />
+                  <button type="button" onclick="togglePassword('claude_api_key')"
+                          class="absolute right-2 top-1/2 -translate-y-1/2
+                                 text-gray-500 hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                         viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+                               9.542 7-1.274 4.057-5.064 7-9.542 7-4.477
+                               0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /Card 1 -->
+
+          <!-- ── Card 2: ПАРАМЕТРИ ПОСИЛКИ ── -->
+          <div class="bg-gray-900 rounded-xl border border-gray-700 p-5 space-y-4">
+            <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+              <span>📬</span> Параметри посилки
+            </h3>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">Опис вантажу</label>
+              <input id="cargo_description" type="text" placeholder="Товар"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">Вага (кг)</label>
+              <input id="cargo_weight" type="number" min="0" step="0.1" placeholder="1"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">Оголошена вартість (грн)</label>
+              <input id="cargo_cost" type="number" min="0" placeholder="500"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs text-gray-500">Кількість місць</label>
+              <input id="cargo_seats" type="number" min="1" placeholder="1"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                            px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                            focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-xs text-gray-500">
+                Габарити (см)
+                <span class="text-gray-600 ml-1">— для поштоматів; 0 = авто</span>
+              </label>
+              <div class="grid grid-cols-3 gap-2">
+                <div class="space-y-1">
+                  <label class="text-xs text-gray-600">Довжина</label>
+                  <input id="cargo_length" type="number" min="0" placeholder="0"
+                         class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                                px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                                focus:outline-none focus:border-blue-500 transition-colors" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs text-gray-600">Ширина</label>
+                  <input id="cargo_width" type="number" min="0" placeholder="0"
+                         class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                                px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                                focus:outline-none focus:border-blue-500 transition-colors" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs text-gray-600">Висота</label>
+                  <input id="cargo_height" type="number" min="0" placeholder="0"
+                         class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                                px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                                focus:outline-none focus:border-blue-500 transition-colors" />
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /Card 2 -->
+
+          <!-- ── Card 3: AI ПАРСЕР ── -->
+          <div class="bg-gray-900 rounded-xl border border-gray-700 p-5 space-y-4 flex flex-col">
+            <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2 flex-shrink-0">
+              <span>🤖</span> AI Парсер
+            </h3>
+            <p class="text-xs text-gray-600 flex-shrink-0">
+              Системний промпт для Claude. Зміни застосовуються одразу.
+            </p>
+            <textarea id="ai_system_prompt"
+                      class="flex-1 min-h-0 bg-gray-800 border border-gray-600 rounded-lg
+                             px-3 py-2.5 text-xs text-gray-100 placeholder-gray-600
+                             font-mono leading-relaxed resize-none
+                             focus:outline-none focus:border-blue-500 transition-colors"
+                      style="min-height: 200px;"></textarea>
+          </div><!-- /Card 3 -->
+
+        </div><!-- /3-column grid -->
+
+        <!-- ── Full-width card: ДОСТУП ── -->
+        <div class="bg-gray-900 rounded-xl border border-gray-700 p-5 space-y-3">
+          <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+            <span>🔐</span> Доступ
+          </h3>
+          <div class="flex gap-6 flex-wrap">
+            <div class="flex-1 min-w-64 space-y-1.5">
+              <label class="text-xs text-gray-500">
+                Дозволені email
+                <span class="text-gray-600 ml-1">— через кому; порожньо = будь-який Google-акаунт</span>
+              </label>
+              <textarea id="allowed_emails" rows="2"
+                        placeholder="user@gmail.com, other@gmail.com"
+                        class="w-full bg-gray-800 border border-gray-600 rounded-lg
+                               px-3 py-2 text-sm text-gray-100 placeholder-gray-600
+                               focus:outline-none focus:border-blue-500 transition-colors resize-none">
+              </textarea>
+            </div>
+            <div class="flex-shrink-0 flex items-end pb-1">
+              <p class="text-xs text-gray-600">
+                Залогінено як:
+                <span class="text-gray-400 ml-1">{{ user_email }}</span>
+              </p>
+            </div>
+          </div>
+        </div><!-- /ДОСТУП card -->
+
+        <div id="settings-msg" class="hidden rounded-lg px-4 py-3 text-sm"></div>
+
+      </div><!-- /scrollable content -->
+
+      <!-- Sticky footer -->
+      <div class="flex-shrink-0 border-t border-gray-700 px-6 py-4 flex items-center justify-end gap-3">
+        <button onclick="closeSettings()"
+                class="px-5 py-2.5 rounded-lg text-sm font-medium
+                       bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
+          Скасувати
+        </button>
+        <button onclick="saveSettings()" id="btn-save-settings"
+                class="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium
+                       bg-blue-600 hover:bg-blue-500 text-white transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9
+                     a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+          </svg>
+          <span id="btn-save-text">Зберегти налаштування</span>
+          <svg id="spinner-save" class="spinner w-4 h-4 hidden" fill="none"
+               viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10"
+                    stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+        </button>
+      </div>
+
+    </div><!-- /modal card -->
+  </div><!-- /settingsModal -->
+
+  <!-- ════════════════════ JavaScript ════════════════════ -->
+  <script>
+    let currentParsed     = null;
+    let repeatData        = null;
+    let repeatConfirmMode = false;
+
+    const DELIVERY_LABELS = {
+      warehouse:     'Відділення',
+      parcel_locker: 'Поштомат',
+      address:       'Адресна',
+    };
+    const TYPE_SHORT = {
+      warehouse:     'Відд.',
+      parcel_locker: 'Пошт.',
+      address:       'Адрес.',
+    };
+
+    // ── Date formatter ──
+    function fmtDate(str) {
+      if (!str) return '';
+      const [datePart = '', timePart = ''] = str.split(' ');
+      const [y, m, d] = datePart.split('-');
+      const [hh, mm]  = timePart.split(':');
+      if (!y || !m || !d) return str;
+      const yearSuffix = y !== String(new Date().getFullYear()) ? ` '${y.slice(2)}` : '';
+      return `${d}.${m}${yearSuffix} ${hh}:${mm}`;
+    }
+
+    // ── Sub-tab switching ──
+    function switchSubTab(name) {
+      document.querySelectorAll('.subtab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('subtab-' + name).classList.remove('hidden');
+      document.querySelectorAll('.subtab-btn').forEach(btn => {
+        btn.classList.remove('border-red-400', 'text-white');
+        btn.classList.add('border-transparent', 'text-gray-400');
+      });
+      const active = document.getElementById('subtab-btn-' + name);
+      if (active) {
+        active.classList.add('border-red-400', 'text-white');
+        active.classList.remove('border-transparent', 'text-gray-400');
+      }
+    }
+
+    // ── Settings modal ──
+    function openSettings() {
+      document.getElementById('settingsModal').classList.remove('hidden');
+      loadSettings();
+    }
+    function closeSettings() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+    function onModalBackdropClick(event) {
+      if (event.target === event.currentTarget) closeSettings();
+    }
+
+    // ── Toast ──
+    function showToast(msg, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const colors = type === 'success'
+        ? 'bg-green-800 border-green-600 text-green-100'
+        : 'bg-red-900 border-red-600 text-red-200';
+      el.className = `toast-in rounded-lg border px-4 py-3 text-sm shadow-xl ${colors}`;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.classList.replace('toast-in', 'toast-out');
+        setTimeout(() => el.remove(), 400);
+      }, 4000);
+    }
+
+    // ── Toggle password visibility ──
+    function togglePassword(id) {
+      const inp = document.getElementById(id);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    // ── Button spinner ──
+    function setLoading(btnId, spinnerId, textId, loading, label) {
+      const btn = document.getElementById(btnId);
+      const sp  = document.getElementById(spinnerId);
+      const tx  = document.getElementById(textId);
+      btn.disabled = loading;
+      sp.classList.toggle('hidden', !loading);
+      if (label) tx.textContent = label;
+    }
+
+    // ── Create error block ──
+    function showCreateError(msg) {
+      const el = document.getElementById('create-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideCreateError() {
+      document.getElementById('create-error').classList.add('hidden');
+    }
+
+    // ── Current delivery type ──
+    function getDeliveryType() {
+      const checked = document.querySelector('input[name="delivery_type"]:checked');
+      return checked ? checked.value : 'warehouse';
+    }
+
+    // ── Delivery type switcher ──
+    function onDeliveryTypeChange(resetPreview) {
+      const type = getDeliveryType();
+      document.querySelectorAll('.delivery-type-label').forEach(label => {
+        const val = label.querySelector('input').value;
+        if (val === type) {
+          label.classList.add('bg-gray-700', 'text-white', 'font-medium');
+          label.classList.remove('text-gray-400');
+        } else {
+          label.classList.remove('bg-gray-700', 'text-white', 'font-medium');
+          label.classList.add('text-gray-400');
+        }
+      });
+      ['warehouse','parcel_locker','address'].forEach(t => {
+        document.getElementById('hint-' + t).classList.toggle('hidden', t !== type);
+      });
+      if (resetPreview) {
+        document.getElementById('preview-block').classList.add('hidden');
+        document.getElementById('btn-create').disabled = true;
+        currentParsed = null;
+      }
+    }
+
+    // ── Preview field ──
+    function setPreviewField(id, value, required) {
+      const el = document.getElementById(id);
+      if (!el) return true;
+      el.textContent = value || '—';
+      el.classList.remove('field-error', 'field-ok', 'border-gray-700');
+      if (required && !value) { el.classList.add('field-error'); return false; }
+      el.classList.add(required ? 'field-ok' : 'border-gray-700');
+      return true;
+    }
+
+    // ── Render preview ──
+    function renderPreview(parsed) {
+      const dt = parsed.delivery_type || 'warehouse';
+      const inp = document.querySelector(`input[name="delivery_type"][value="${dt}"]`);
+      if (inp) { inp.checked = true; onDeliveryTypeChange(false); }
+      document.getElementById('p-delivery-type-badge').textContent = DELIVERY_LABELS[dt] || dt;
+
+      let ok = true;
+      ok = setPreviewField('p-last-name',  parsed.last_name,  true) && ok;
+      ok = setPreviewField('p-first-name', parsed.first_name, true) && ok;
+      ok = setPreviewField('p-middle-name', parsed.middle_name || '(не вказано)', false) && ok;
+      ok = setPreviewField('p-phone',      parsed.phone,      true) && ok;
+      ok = setPreviewField('p-city',       parsed.city,       true) && ok;
+
+      document.getElementById('preview-warehouse-fields').style.display =
+        dt === 'warehouse'     ? 'grid' : 'none';
+      document.getElementById('preview-locker-fields').style.display =
+        dt === 'parcel_locker' ? 'grid' : 'none';
+      document.getElementById('preview-address-fields').style.display =
+        dt === 'address'       ? 'grid' : 'none';
+
+      if (dt === 'warehouse') {
+        ok = setPreviewField('p-warehouse', parsed.warehouse_number, true) && ok;
+      } else if (dt === 'parcel_locker') {
+        ok = setPreviewField('p-locker', parsed.warehouse_number, true) && ok;
+      } else {
+        ok = setPreviewField('p-street',   parsed.street,   true) && ok;
+        ok = setPreviewField('p-building', parsed.building, true) && ok;
+        setPreviewField('p-apartment', parsed.apartment || '(не вказано)', false);
+      }
+
+      document.getElementById('preview-hint').classList.toggle('hidden', ok);
+      document.getElementById('preview-block').classList.remove('hidden');
+      if (ok) { currentParsed = parsed; document.getElementById('btn-create').disabled = false; }
+    }
+
+    // ── "Розпізнати" ──
+    async function previewRecipient() {
+      const text = document.getElementById('recipient-text').value.trim();
+      if (!text) { showToast('Введіть текст отримувача', 'error'); return; }
+      hideCreateError();
+      currentParsed = null;
+      document.getElementById('btn-create').disabled = true;
+      setLoading('btn-preview', 'spinner-preview', 'btn-preview-text', true, 'Розпізнаю...');
+      document.getElementById('btn-fast').disabled = true;
+      try {
+        const res  = await fetch('/create', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text, preview_only: true}),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          showCreateError(data.error || 'Помилка розпізнавання');
+          document.getElementById('preview-block').classList.add('hidden');
+        } else { renderPreview(data.parsed); }
+      } catch (e) { showCreateError('Мережева помилка: ' + e.message); }
+      finally {
+        setLoading('btn-preview', 'spinner-preview', 'btn-preview-text', false, 'Розпізнати');
+        document.getElementById('btn-fast').disabled = false;
+      }
+    }
+
+    // ── "Створити ТТН" ──
+    async function createTTN() {
+      const text = document.getElementById('recipient-text').value.trim();
+      if (!text) return;
+      hideCreateError();
+      setLoading('btn-create', 'spinner-create', 'btn-create-text', true, 'Створюю...');
+      document.getElementById('btn-preview').disabled = true;
+      document.getElementById('btn-fast').disabled    = true;
+      try {
+        const res  = await fetch('/create', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text}),
+        });
+        const data = await res.json();
+        if (!data.success) { showCreateError(data.error || 'Невідома помилка'); }
+        else {
+          showToast(`✓ ТТН ${data.ttn_number || data.ttn} успішно створено!`, 'success');
+          document.getElementById('recipient-text').value = '';
+          document.getElementById('preview-block').classList.add('hidden');
+          document.getElementById('btn-create').disabled = true;
+          currentParsed = null;
+          loadTTNs();
+        }
+      } catch (e) { showCreateError('Мережева помилка: ' + e.message); }
+      finally {
+        setLoading('btn-create', 'spinner-create', 'btn-create-text', false, 'Створити ТТН');
+        document.getElementById('btn-preview').disabled = false;
+        document.getElementById('btn-fast').disabled    = false;
+      }
+    }
+
+    // ── "⚡ Розпізнати і створити" ──
+    async function fastCreateTTN() {
+      const text = document.getElementById('recipient-text').value.trim();
+      if (!text) { showToast('Введіть текст отримувача', 'error'); return; }
+      hideCreateError();
+      setLoading('btn-fast', 'spinner-fast', 'btn-fast-text', true, 'Розпізнаємо та створюємо...');
+      document.getElementById('btn-preview').disabled = true;
+      document.getElementById('btn-create').disabled  = true;
+      try {
+        const res  = await fetch('/create', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text, force: true}),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          const prefix = data.stage === 'parse' ? 'Не вдалось розпізнати: ' : '';
+          showCreateError(prefix + (data.error || 'Невідома помилка'));
+        } else {
+          showToast(`✓ ТТН ${data.ttn_number || data.ttn} успішно створено!`, 'success');
+          document.getElementById('recipient-text').value = '';
+          document.getElementById('preview-block').classList.add('hidden');
+          currentParsed = null;
+          loadTTNs();
+        }
+      } catch (e) { showCreateError('Мережева помилка: ' + e.message); }
+      finally {
+        setLoading('btn-fast', 'spinner-fast', 'btn-fast-text', false, 'Розпізнати і створити');
+        document.getElementById('btn-preview').disabled = false;
+        document.getElementById('btn-create').disabled  = !currentParsed;
+      }
+    }
+
+    // ── Repeat TTN ──
+    function onRepeatInputChange() {
+      if (!repeatConfirmMode) return;
+      repeatConfirmMode = false; repeatData = null;
+      const btn = document.getElementById('btn-repeat');
+      document.getElementById('btn-repeat-text').textContent = 'Створити →';
+      btn.classList.remove('bg-green-600', 'hover:bg-green-500');
+      btn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+      document.getElementById('repeat-preview').classList.add('hidden');
+      hideRepeatError();
+    }
+    function showRepeatError(msg) {
+      const el = document.getElementById('repeat-error');
+      el.textContent = msg; el.classList.remove('hidden');
+    }
+    function hideRepeatError() { document.getElementById('repeat-error').classList.add('hidden'); }
+
+    function renderRepeatPreview(data) {
+      const dt = data.delivery_type || 'warehouse';
+      document.getElementById('repeat-delivery-badge').textContent = DELIVERY_LABELS[dt] || dt;
+      document.getElementById('repeat-recipient-name').textContent = data.recipient_name || '—';
+      document.getElementById('repeat-phone').textContent = data.recipient_phone || '—';
+      let addr = data.city || '';
+      if (dt === 'address') { if (data.warehouse_description) addr += ' — ' + data.warehouse_description; }
+      else if (data.warehouse_number) {
+        addr += ' — ' + (dt === 'parcel_locker' ? 'поштомат ' : 'відд. ') + data.warehouse_number;
+      }
+      document.getElementById('repeat-address').textContent = addr;
+      document.getElementById('repeat-preview').classList.remove('hidden');
+    }
+
+    async function repeatTTN() {
+      const raw = document.getElementById('repeat-ttn-input').value.replace(/\D/g, '');
+      if (raw.length < 14) { showRepeatError('Введіть повний 14-значний номер ТТН'); return; }
+      hideRepeatError();
+      const btn = document.getElementById('btn-repeat');
+      const textEl = document.getElementById('btn-repeat-text');
+      const spinEl = document.getElementById('spinner-repeat');
+
+      if (!repeatConfirmMode) {
+        btn.disabled = true; textEl.textContent = 'Завантаження...'; spinEl.classList.remove('hidden');
+        try {
+          const res  = await fetch('/repeat/preview', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ttn_number: raw}),
+          });
+          const data = await res.json();
+          if (!data.success) { showRepeatError(data.error || 'Помилка завантаження даних ТТН'); }
+          else {
+            repeatData = data.data; renderRepeatPreview(data.data);
+            repeatConfirmMode = true; textEl.textContent = 'Підтвердити і створити ТТН';
+            btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+            btn.classList.add('bg-green-600', 'hover:bg-green-500');
+          }
+        } catch (e) { showRepeatError('Мережева помилка: ' + e.message); }
+        finally {
+          btn.disabled = false; spinEl.classList.add('hidden');
+          if (!repeatConfirmMode) textEl.textContent = 'Створити →';
+        }
+      } else {
+        btn.disabled = true; textEl.textContent = 'Створюю...'; spinEl.classList.remove('hidden');
+        try {
+          const res  = await fetch('/repeat/create', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ttn_number: raw}),
+          });
+          const data = await res.json();
+          if (!data.success) { showRepeatError(data.error || 'Помилка створення ТТН'); }
+          else {
+            showToast(`✓ ТТН ${data.ttn} успішно створено!`, 'success');
+            document.getElementById('repeat-ttn-input').value = '';
+            document.getElementById('repeat-preview').classList.add('hidden');
+            repeatData = null; repeatConfirmMode = false;
+            textEl.textContent = 'Створити →';
+            btn.classList.remove('bg-green-600', 'hover:bg-green-500');
+            btn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+            hideRepeatError(); loadTTNs();
+          }
+        } catch (e) { showRepeatError('Мережева помилка: ' + e.message); }
+        finally {
+          btn.disabled = false; spinEl.classList.add('hidden');
+          if (repeatConfirmMode) textEl.textContent = 'Підтвердити і створити ТТН';
+        }
+      }
+    }
+
+    // ── Fill repeat form from table ──
+    function repeatFromTable(ttn) {
+      document.getElementById('repeat-ttn-input').value = ttn;
+      onRepeatInputChange();
+      switchSubTab('repeat');
+    }
+
+    // ── Load TTN list ──
+    async function loadTTNs() {
+      const tbody = document.getElementById('ttns-tbody');
+      try {
+        const ttns = await (await fetch('/ttns')).json();
+        if (!ttns.length) {
+          tbody.innerHTML = `<tr><td colspan="9"
+            class="text-center py-12 text-gray-600 text-sm">Ще немає жодної ТТН</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = ttns.map(t => {
+          const dt = t.delivery_type || 'warehouse';
+          const typeShort = TYPE_SHORT[dt] || dt;
+          const badge = dt === 'warehouse' ? 'bg-blue-900/40 text-blue-300'
+                      : dt === 'parcel_locker' ? 'bg-purple-900/40 text-purple-300'
+                      : 'bg-teal-900/40 text-teal-300';
+          const addrPrefix = dt === 'parcel_locker' ? 'пошт. ' : dt === 'address' ? '' : 'відд. ';
+          return `
+          <tr class="border-t border-gray-700/50 hover:bg-gray-700/20 transition-colors">
+            <td class="px-2 py-2 text-gray-500 text-xs whitespace-nowrap">${fmtDate(t.created_at)}</td>
+            <td class="px-2 py-2 font-mono font-semibold text-yellow-400 text-xs whitespace-nowrap overflow-hidden">${escHtml(t.ttn_number)}</td>
+            <td class="px-2 py-2 text-xs overflow-hidden">
+              <div class="truncate text-gray-200" title="${escHtml(t.recipient_name)}">${escHtml(t.recipient_name)}</div>
+            </td>
+            <td class="px-2 py-2 text-xs overflow-hidden">
+              <div class="truncate text-gray-300">${escHtml(t.city)}</div>
+              <div class="truncate text-gray-600">${escHtml(addrPrefix + (t.warehouse || ''))}</div>
+            </td>
+            <td class="px-2 py-2 text-xs overflow-hidden">
+              <div class="truncate text-gray-400 font-mono">${escHtml(t.recipient_phone || '') || '—'}</div>
+            </td>
+            <td class="px-2 py-2 text-xs text-gray-400 whitespace-nowrap">${escHtml(t.weight ? t.weight + ' кг' : '—')}</td>
+            <td class="px-2 py-2 text-xs text-gray-400 whitespace-nowrap">${escHtml(t.dimensions || '—')}</td>
+            <td class="px-2 py-2 text-xs"><span class="px-1 py-0.5 rounded whitespace-nowrap ${badge}">${typeShort}</span></td>
+            <td class="px-2 py-2">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="copyTTN(this, '${escHtml(t.ttn_number)}')" title="Скопіювати"
+                        class="inline-flex items-center justify-center w-7 h-7 bg-gray-700 hover:bg-gray-600 rounded transition-colors text-gray-300">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+                <a href="https://novaposhta.ua/tracking/?cargo_number=${escHtml(t.ttn_number)}"
+                   target="_blank" rel="noopener" title="Відстежити"
+                   class="inline-flex items-center justify-center w-7 h-7 bg-blue-700 hover:bg-blue-600 rounded transition-colors text-white">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                  </svg>
+                </a>
+                <button onclick="repeatFromTable('${escHtml(t.ttn_number)}')" title="Повторити ТТН"
+                        class="inline-flex items-center justify-center w-7 h-7 bg-indigo-700 hover:bg-indigo-600 rounded transition-colors text-white">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9"
+          class="text-center py-8 text-red-400 text-sm">Помилка завантаження: ${e.message}</td></tr>`;
+      }
+    }
+
+    // ── Copy TTN ──
+    async function copyTTN(btn, ttn) {
+      try {
+        await navigator.clipboard.writeText(ttn);
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✓'; btn.classList.add('bg-green-700', '!text-green-100');
+        setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('bg-green-700', '!text-green-100'); }, 2000);
+      } catch { showToast('Не вдалось скопіювати в буфер', 'error'); }
+    }
+
+    // ── Settings load/save ──
+    const SETTINGS_FIELDS = [
+      'np_api_key','claude_api_key',
+      'sender_name','sender_phone','sender_city','sender_warehouse','sender_np_ref',
+      'cargo_description','cargo_cost','cargo_weight','cargo_seats',
+      'cargo_length','cargo_width','cargo_height',
+      'allowed_emails','ai_system_prompt',
+    ];
+
+    async function loadSettings() {
+      try {
+        const data = await (await fetch('/settings')).json();
+        SETTINGS_FIELDS.forEach(f => {
+          const el = document.getElementById(f);
+          if (el && data[f] !== undefined) el.value = data[f];
+        });
+      } catch (e) { console.error('Помилка завантаження налаштувань:', e); }
+    }
+
+    async function saveSettings() {
+      const payload = {};
+      SETTINGS_FIELDS.forEach(f => { const el = document.getElementById(f); if (el) payload[f] = el.value; });
+      const msgEl = document.getElementById('settings-msg');
+      setLoading('btn-save-settings', 'spinner-save', 'btn-save-text', true, 'Зберігаю...');
+      try {
+        const data = await (await fetch('/settings/save', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        })).json();
+        if (data.success) {
+          msgEl.textContent = '✓ Налаштування збережено';
+          msgEl.className = 'rounded-lg px-4 py-3 text-sm bg-green-900/40 border border-green-600 text-green-300';
+          msgEl.classList.remove('hidden');
+          setTimeout(() => msgEl.classList.add('hidden'), 3000);
+        } else throw new Error(data.error || 'Невідома помилка');
+      } catch (e) {
+        msgEl.textContent = '✗ Помилка: ' + e.message;
+        msgEl.className = 'rounded-lg px-4 py-3 text-sm bg-red-900/40 border border-red-500 text-red-300';
+        msgEl.classList.remove('hidden');
+      } finally {
+        setLoading('btn-save-settings', 'spinner-save', 'btn-save-text', false, 'Зберегти налаштування');
+      }
+    }
+
+    // ── HTML escape ──
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Init ──
+    switchSubTab('create');
+    loadTTNs();
+  </script>
+
+</body>
+</html>
