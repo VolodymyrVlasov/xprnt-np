@@ -17,8 +17,12 @@ jobs:
         run: |
           cp /opt/xprnt/nova-local/.env $GITHUB_WORKSPACE/.env
 
+      - name: Stop old container
+        run: |
+          docker stop nova-ttn || true
+          docker rm nova-ttn || true
+
       - name: Deploy
         run: |
           cd $GITHUB_WORKSPACE
-          docker compose down
           docker compose up -d --build
